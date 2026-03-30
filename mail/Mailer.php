@@ -318,15 +318,17 @@ class Mailer {
 <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%">
 
   <!-- HEADER -->
-  <tr><td style="background:#7c5cbf;border-radius:18px 18px 0 0;padding:32px 36px 28px">
+  <tr><td bgcolor="#7c5cbf" style="background-color:#7c5cbf;border-radius:18px 18px 0 0;padding:32px 36px 28px">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
       <td>
-        <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.65);margin-bottom:8px">AUNOR · Aleatica · CyberPlan</div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#c4b5e8;margin-bottom:8px">AUNOR &middot; Aleatica &middot; CyberPlan</div>
         <div style="font-size:24px;font-weight:800;color:#ffffff;line-height:1.2">Actividad Ejecutada</div>
-        <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px">{$fecha} &nbsp;·&nbsp; {$mes}</div>
+        <div style="font-size:12px;color:#c4b5e8;margin-top:6px">{$fecha} &nbsp;&middot;&nbsp; {$mes}</div>
       </td>
       <td align="right" valign="top">
-        <div style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:13px;font-weight:800;padding:8px 16px;border-radius:99px;letter-spacing:1px;font-family:monospace">{$cat}</div>
+        <table cellpadding="0" cellspacing="0"><tr><td bgcolor="#9b7fd4" style="background-color:#9b7fd4;border-radius:99px;padding:7px 16px;text-align:center">
+          <span style="color:#ffffff;font-size:13px;font-weight:800;letter-spacing:1px;font-family:monospace">{$cat}</span>
+        </td></tr></table>
       </td>
     </tr></table>
   </td></tr>
@@ -449,32 +451,36 @@ HTML;
 <tr><td align="center" style="padding:0 16px">
 <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
 
-  <!-- HEADER GRADIENTE -->
-  <tr><td style="background:linear-gradient(135deg,#7c5cbf 0%,#5b4a9e 100%);border-radius:18px 18px 0 0;padding:32px 36px 28px">
+  <!-- HEADER -->
+  <tr><td bgcolor="#7c5cbf" style="background-color:#7c5cbf;border-radius:18px 18px 0 0;padding:32px 36px 28px">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td>
-        <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.65);margin-bottom:8px">AUNOR · Aleatica · CyberPlan</div>
+      <td valign="middle">
+        <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#c4b5e8;margin-bottom:8px">AUNOR &middot; Aleatica &middot; CyberPlan</div>
         <div style="font-size:26px;font-weight:800;color:#ffffff;line-height:1.2">Resumen Semanal</div>
-        <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px">Semana #{$semana} &nbsp;·&nbsp; {$fecha} &nbsp;·&nbsp; Año {$anio}</div>
+        <div style="font-size:12px;color:#c4b5e8;margin-top:6px">Semana #{$semana} &nbsp;&middot;&nbsp; {$fecha} &nbsp;&middot;&nbsp; A&ntilde;o {$anio}</div>
       </td>
-      <td align="right" valign="top">
-        <div style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:12px 18px;text-align:center">
-          <div style="font-size:28px;font-weight:900;color:#ffffff;line-height:1">{$cumpl}%</div>
-          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.65);margin-top:3px">Cumplimiento</div>
-        </div>
+      <td align="right" valign="middle" style="padding-left:16px">
+        <table cellpadding="0" cellspacing="0"><tr><td bgcolor="#9b7fd4" style="background-color:#9b7fd4;border-radius:12px;padding:14px 20px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:#ffffff;line-height:1;white-space:nowrap">{$cumpl}%</div>
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#ddd6fe;margin-top:4px">Cumplimiento</div>
+        </td></tr></table>
       </td>
     </tr></table>
   </td></tr>
 
   <!-- BARRA DE PROGRESO -->
-  <tr><td style="background:#ffffff;padding:20px 36px 16px">
-    <table width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td><div style="font-size:13px;font-weight:600;color:#374151">Progreso del año</div></td>
-      <td align="right"><div style="font-size:13px;font-weight:700;color:{$barClr}">{$s['ejecutadas']} / {$s['programadas']} ejecutadas</div></td>
+  <tr><td bgcolor="#ffffff" style="background-color:#ffffff;padding:20px 36px 16px">
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px"><tr>
+      <td style="font-size:13px;font-weight:600;color:#374151">Progreso del a&ntilde;o</td>
+      <td align="right" style="font-size:13px;font-weight:700;color:{$barClr}">{$s['ejecutadas']} / {$s['programadas']} ejecutadas</td>
     </tr></table>
-    <div style="background:#f3f4f6;border-radius:99px;height:8px;margin-top:10px;overflow:hidden">
-      <div style="background:linear-gradient(90deg,{$barClr},{$barClr}cc);height:8px;border-radius:99px;width:{$barW}%"></div>
-    </div>
+    <!-- Progress bar usando tabla (compatible con todos los clientes de correo) -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:8px;overflow:hidden">
+      <tr>
+        <td width="{$barW}%" bgcolor="{$barClr}" height="10" style="background-color:{$barClr};border-radius:8px;font-size:1px;line-height:1px">&nbsp;</td>
+        <td bgcolor="#f3f4f6" height="10" style="background-color:#f3f4f6;font-size:1px;line-height:1px">&nbsp;</td>
+      </tr>
+    </table>
   </td></tr>
 
   <!-- TARJETAS DE STATS -->
