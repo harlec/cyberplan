@@ -23,7 +23,7 @@ $anios_disponibles = range(2024, 2027);
   --bg:        #eef2ff;
   --surface:   #ffffff; --surface2: #f7f8ff; --surface3: #f0f2ff;
   --border:    rgba(0,0,0,.07); --border2: rgba(0,0,0,.12);
-  --text:      #1e1e2d; --text2: #6b7280; --text3: #9ca3af;
+  --text:      #111827; --text2: #374151; --text3: #6b7280;
   --radius:    16px; --radius-sm: 10px;
   --shadow:    0 2px 16px rgba(124,92,191,.08);
   --shadow-lg: 0 12px 48px rgba(124,92,191,.16);
