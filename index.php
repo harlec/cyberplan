@@ -45,7 +45,7 @@ body{font-family:var(--font);background:linear-gradient(135deg,#dce8ff 0%,#ece8f
 .sidebar-nav{flex:1;overflow-y:auto;padding:8px}
 .sidebar-nav a{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-sm);color:var(--text2);text-decoration:none;font-size:13.5px;font-weight:600;transition:all .2s;cursor:pointer;margin-bottom:2px}
 .sidebar-nav a:hover{background:var(--surface2);color:var(--text)}
-.sidebar-nav a.active{background:var(--primary-l);color:var(--primary);font-weight:700}
+.sidebar-nav a.active{background:#ffffff;color:var(--primary);font-weight:700;box-shadow:0 2px 12px rgba(124,92,191,.15)}
 .sidebar-nav a.active i{color:var(--primary)}
 .sidebar-nav a i{width:16px;text-align:center;font-size:14px;color:var(--text3);transition:color .2s}
 .sidebar-footer{padding:16px;border-top:1px solid var(--border)}
@@ -85,13 +85,8 @@ body{font-family:var(--font);background:linear-gradient(135deg,#dce8ff 0%,#ece8f
 
 /* STAT CARDS */
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s;box-shadow:var(--shadow-card)}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;transition:transform .2s,box-shadow .2s;box-shadow:var(--shadow-card)}
 .stat-card:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(124,92,191,.12)}
-.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0}
-.stat-card.green::before{background:linear-gradient(90deg,var(--green),var(--teal))}
-.stat-card.orange::before{background:linear-gradient(90deg,var(--orange),#f7971e)}
-.stat-card.blue::before{background:linear-gradient(90deg,var(--teal),var(--primary))}
-.stat-card.red::before{background:linear-gradient(90deg,var(--red),var(--orange))}
 .stat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:16px}
 .stat-icon.green{background:var(--green-l);color:var(--green)}
 .stat-icon.orange{background:var(--orange-l);color:#c48a00}
@@ -495,7 +490,7 @@ body{font-family:var(--font);background:linear-gradient(135deg,#dce8ff 0%,#ece8f
       </div>
       <div class="form-group"><label class="form-label">Nombre</label><input type="text" class="form-input" id="fNombre" required></div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Responsable</label><input type="text" class="form-input" id="fResponsable" placeholder="RSRR"></div>
+        <div class="form-group"><label class="form-label">Responsable</label><select class="form-select" id="fResponsable"><option value="">— Sin asignar —</option></select></div>
         <div class="form-group"><label class="form-label">Año</label><input type="number" class="form-input" id="fAnio" value="<?= $anio_actual ?>" min="2024" max="2030"></div>
       </div>
       <div class="modal-actions">
@@ -915,23 +910,31 @@ async function loadEmailLog() {
 }
 
 // ── MODAL ACTIVIDAD ──────────────────────────
-function openModalNueva() {
+async function llenarSelectResponsable(valorActual = '') {
+  if (!STATE.usuarios.length) STATE.usuarios = await api(usrAPI({action:'usuarios'}));
+  const sel = document.getElementById('fResponsable');
+  const activos = STATE.usuarios.filter(u => u.activo == '1');
+  sel.innerHTML = '<option value="">— Sin asignar —</option>' +
+    activos.map(u => `<option value="${u.nombre}"${u.nombre === valorActual ? ' selected' : ''}>${u.nombre}</option>`).join('');
+}
+async function openModalNueva() {
   document.getElementById('modalTitle').textContent = 'Nueva Actividad';
   document.getElementById('editId').value = '';
   document.getElementById('actividadForm').reset();
   document.getElementById('fAnio').value = STATE.anio;
+  await llenarSelectResponsable();
   document.getElementById('modalOverlay').classList.add('open');
 }
-function editAct(id) {
+async function editAct(id) {
   const a = STATE.datos?.actividades?.find(x => x.id == id);
   if (!a) { toast('Actividad no encontrada','error'); return; }
   document.getElementById('modalTitle').textContent = 'Editar Actividad';
   document.getElementById('editId').value = id;
   document.getElementById('fCodigo').value = a.codigo;
   document.getElementById('fNombre').value = a.nombre;
-  document.getElementById('fResponsable').value = a.responsable || '';
   document.getElementById('fCategoria').value = a.categoria || 'F2';
   document.getElementById('fAnio').value = a.anio || STATE.anio;
+  await llenarSelectResponsable(a.responsable || '');
   document.getElementById('modalOverlay').classList.add('open');
 }
 function closeModal(e) { if(e.target===document.getElementById('modalOverlay')) closeModalDirect(); }
