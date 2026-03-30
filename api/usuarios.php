@@ -103,14 +103,34 @@ function testEmail(PDO $db): never {
     $dest = [$d['email'] ?? ''];
     if (empty($dest[0])) throw new Exception('Email requerido');
 
+    $fecha  = date('d/m/Y H:i');
+    $html   = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:linear-gradient(135deg,#dce8ff 0%,#ece8ff 60%,#e0f0ff 100%);font-family:\'Segoe UI\',Helvetica,Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0">
+<tr><td align="center" style="padding:0 16px">
+<table width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%">
+  <tr><td style="background:#7c5cbf;border-radius:18px 18px 0 0;padding:28px 32px">
+    <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.65);margin-bottom:8px">AUNOR &middot; Aleatica &middot; CyberPlan</div>
+    <div style="font-size:22px;font-weight:800;color:#ffffff">Prueba de conexi&oacute;n SMTP</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:5px">' . $fecha . '</div>
+  </td></tr>
+  <tr><td style="background:#ffffff;padding:28px 32px">
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid #2ecc71;border-radius:12px;padding:18px 20px;margin-bottom:18px">
+      <div style="font-size:15px;font-weight:700;color:#15803d;margin-bottom:4px">Conexi&oacute;n exitosa</div>
+      <div style="font-size:13px;color:#374151">La configuraci&oacute;n SMTP de CyberPlan funciona correctamente.</div>
+    </div>
+    <div style="background:#f7f8ff;border:1px solid #e5e7eb;border-radius:12px;padding:16px 18px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9ca3af;margin-bottom:6px">Informaci&oacute;n</div>
+      <div style="font-size:12px;color:#6b7280">Si recibes este mensaje, el servidor SMTP est&aacute; correctamente configurado y CyberPlan puede enviar notificaciones y res&uacute;menes semanales.</div>
+    </div>
+  </td></tr>
+  <tr><td style="background:#f0f2ff;border-radius:0 0 18px 18px;padding:16px 32px;border-top:1px solid #e5e7eb;text-align:center">
+    <p style="font-size:11px;color:#9ca3af;margin:0">Correo de prueba &nbsp;&middot;&nbsp; <strong style="color:#7c5cbf">CyberPlan &nbsp;&middot;&nbsp; AUNOR &nbsp;&middot;&nbsp; Red Vial 4</strong></p>
+  </td></tr>
+</table></td></tr></table>
+</body></html>';
     $mailer = new Mailer();
-    $ok = $mailer->send($dest, '🔧 Prueba de conexión SMTP — CyberPlan', '
-        <div style="background:#0d1117;color:#e6edf3;padding:32px;font-family:sans-serif;border-radius:12px">
-            <h2 style="color:#72BF44">✅ Conexión SMTP exitosa</h2>
-            <p style="color:#8b949e">La configuración SMTP de CyberPlan funciona correctamente.</p>
-            <p style="color:#8b949e;font-size:12px">AUNOR · Aleatica · Red Vial 4</p>
-        </div>
-    ');
+    $ok = $mailer->send($dest, '🔧 Prueba de conexión SMTP — CyberPlan', $html);
     jsonResponse(['success' => $ok, 'message' => $ok ? 'Correo enviado correctamente' : 'Error al enviar']);
 }
 

@@ -289,7 +289,7 @@ class Mailer {
     }
 
     // ═══════════════════════════════════════════
-    // TEMPLATES HTML
+    // TEMPLATES HTML — Tema claro moderno
     // ═══════════════════════════════════════════
     private function templateEjecucion(array $act, string $mes): string {
         $appUrl  = $this->cfg['app_url'] ?? '#';
@@ -298,61 +298,82 @@ class Mailer {
         $nombre  = htmlspecialchars($act['nombre'] ?? '');
         $resp    = htmlspecialchars($act['responsable'] ?? 'Sin asignar');
         $fecha   = date('d/m/Y H:i');
-        $catClr  = match($cat) { 'F3'=>'#72BF44','F2'=>'#F99B1C', default=>'#00BBE7' };
+
+        // Colores por categoría (tema claro)
+        $catClr  = match($cat) { 'F3' => '#2ecc71', 'F2' => '#f7b731', default => '#00c8d4' };
+        $catBg   = match($cat) { 'F3' => '#f0fdf4', 'F2' => '#fffbeb', default => '#f0fdff' };
+        $catTxt  = match($cat) { 'F3' => '#15803d', 'F2' => '#b45309', default => '#0e7490' };
 
         return <<<HTML
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#0d1117;font-family:'Segoe UI',Arial,sans-serif">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0d1117;padding:32px 0">
-<tr><td align="center">
-<table width="580" cellpadding="0" cellspacing="0" style="max-width:580px;width:100%">
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Actividad Ejecutada — CyberPlan</title>
+</head>
+<body style="margin:0;padding:0;background:#eef2ff;font-family:'Segoe UI',Helvetica,Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#dce8ff 0%,#ece8ff 60%,#e0f0ff 100%);padding:40px 0;min-height:100vh">
+<tr><td align="center" style="padding:0 16px">
+<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%">
 
-  <tr><td style="background:#161b22;border-radius:16px 16px 0 0;padding:28px 32px;border-bottom:3px solid {$catClr}">
+  <!-- HEADER -->
+  <tr><td style="background:#7c5cbf;border-radius:18px 18px 0 0;padding:32px 36px 28px">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
       <td>
-        <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#8b949e;margin-bottom:6px">AUNOR · Aleatica · CyberPlan</div>
-        <div style="font-size:22px;font-weight:900;color:#e6edf3">✅ Actividad Ejecutada</div>
-        <div style="font-size:12px;color:#8b949e;margin-top:4px">{$fecha} · {$mes}</div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.65);margin-bottom:8px">AUNOR · Aleatica · CyberPlan</div>
+        <div style="font-size:24px;font-weight:800;color:#ffffff;line-height:1.2">Actividad Ejecutada</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px">{$fecha} &nbsp;·&nbsp; {$mes}</div>
       </td>
-      <td align="right"><div style="background:{$catClr};color:#fff;font-size:13px;font-weight:800;padding:7px 14px;border-radius:7px;font-family:monospace">{$cat}</div></td>
+      <td align="right" valign="top">
+        <div style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:13px;font-weight:800;padding:8px 16px;border-radius:99px;letter-spacing:1px;font-family:monospace">{$cat}</div>
+      </td>
     </tr></table>
   </td></tr>
 
-  <tr><td style="background:#161b22;padding:24px 32px">
-    <div style="background:#1c2333;border:1px solid #30363d;border-left:4px solid {$catClr};border-radius:10px;padding:20px">
-      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#8b949e;margin-bottom:6px">Actividad</div>
-      <div style="font-size:17px;font-weight:800;color:#e6edf3;margin-bottom:4px">{$nombre}</div>
-      <div style="font-size:12px;color:#8b949e;font-family:monospace">{$codigo}</div>
+  <!-- CUERPO -->
+  <tr><td style="background:#ffffff;padding:28px 36px">
+
+    <!-- Card de actividad -->
+    <div style="background:#f7f8ff;border:1px solid #e5e7eb;border-left:4px solid {$catClr};border-radius:12px;padding:20px 22px;margin-bottom:20px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9ca3af;margin-bottom:6px">Actividad completada</div>
+      <div style="font-size:17px;font-weight:700;color:#1e1e2d;line-height:1.4;margin-bottom:6px">{$nombre}</div>
+      <div style="display:inline-block;background:{$catBg};color:{$catTxt};font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;font-family:monospace">{$codigo}</div>
     </div>
 
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px">
+    <!-- Dos columnas: Responsable / Período -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px">
     <tr>
       <td width="50%" style="padding-right:8px">
-        <div style="background:#1c2333;border:1px solid #30363d;border-radius:10px;padding:14px;text-align:center">
-          <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#8b949e;margin-bottom:5px">Responsable</div>
-          <div style="font-size:14px;font-weight:700;color:#00BBE7">{$resp}</div>
+        <div style="background:#f7f8ff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9ca3af;margin-bottom:6px">Responsable</div>
+          <div style="font-size:14px;font-weight:700;color:#7c5cbf">{$resp}</div>
         </div>
       </td>
       <td width="50%" style="padding-left:8px">
-        <div style="background:#1c2333;border:1px solid #30363d;border-radius:10px;padding:14px;text-align:center">
-          <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#8b949e;margin-bottom:5px">Período</div>
-          <div style="font-size:14px;font-weight:700;color:#72BF44">{$mes}</div>
+        <div style="background:#f7f8ff;border:1px solid #e5e7eb;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9ca3af;margin-bottom:6px">Período</div>
+          <div style="font-size:14px;font-weight:700;color:#2ecc71">{$mes}</div>
         </div>
       </td>
     </tr></table>
 
-    <div style="text-align:center;margin-top:22px">
-      <a href="{$appUrl}" style="display:inline-block;background:#72BF44;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 28px;border-radius:8px">Ver en CyberPlan →</a>
+    <!-- CTA -->
+    <div style="text-align:center">
+      <a href="{$appUrl}" style="display:inline-block;background:#7c5cbf;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:13px 32px;border-radius:10px;letter-spacing:.3px">Ver en CyberPlan &rarr;</a>
     </div>
+
   </td></tr>
 
-  <tr><td style="background:#0d1117;border-radius:0 0 16px 16px;padding:16px 32px;border-top:1px solid #21262d;text-align:center">
-    <p style="font-size:11px;color:#484f58;margin:0">Generado automáticamente por <strong style="color:#8b949e">CyberPlan · AUNOR · Red Vial 4</strong></p>
+  <!-- FOOTER -->
+  <tr><td style="background:#f0f2ff;border-radius:0 0 18px 18px;padding:18px 36px;border-top:1px solid #e5e7eb;text-align:center">
+    <p style="font-size:11px;color:#9ca3af;margin:0">Notificación automática &nbsp;·&nbsp; <strong style="color:#7c5cbf">CyberPlan &nbsp;·&nbsp; AUNOR &nbsp;·&nbsp; Red Vial 4</strong></p>
   </td></tr>
 
-</table></td></tr></table>
-</body></html>
+</table>
+</td></tr></table>
+</body>
+</html>
 HTML;
     }
 
@@ -361,102 +382,143 @@ HTML;
         $fecha   = date('d/m/Y');
         $semana  = date('W');
         $MESES   = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
-        $barClr  = $cumpl >= 80 ? '#72BF44' : ($cumpl >= 50 ? '#F99B1C' : '#f85149');
+        $barClr  = $cumpl >= 80 ? '#7c5cbf' : ($cumpl >= 50 ? '#f7b731' : '#e55353');
         $barW    = max(4, (int)$cumpl);
 
+        // Filas de pendientes
         $pendHtml = '';
         if (empty($pendientes)) {
-            $pendHtml = '<tr><td colspan="3" style="padding:14px;text-align:center;color:#8b949e;font-size:12px">🎉 Sin pendientes para este mes</td></tr>';
+            $pendHtml = '<tr><td colspan="3" style="padding:16px;text-align:center;color:#9ca3af;font-size:12px">Sin pendientes para este mes &#x1F389;</td></tr>';
         } else {
-            foreach ($pendientes as $p) {
-                $cc = match($p['categoria']) { 'F3'=>'#72BF44','F2'=>'#F99B1C', default=>'#00BBE7' };
-                $pendHtml .= "<tr style='border-bottom:1px solid #21262d'>
-                  <td style='padding:10px 12px'><span style='background:{$cc}22;color:{$cc};font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:monospace'>{$p['codigo']}</span></td>
-                  <td style='padding:10px 12px;color:#c9d1d9;font-size:12px'>" . htmlspecialchars($p['nombre']) . "</td>
-                  <td style='padding:10px 12px;text-align:center'><span style='background:#00BBE722;color:#00BBE7;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px'>" . htmlspecialchars($p['responsable'] ?? '—') . "</span></td>
+            foreach ($pendientes as $i => $p) {
+                $cc  = match($p['categoria']) { 'F3' => '#2ecc71', 'F2' => '#f7b731', default => '#00c8d4' };
+                $ccB = match($p['categoria']) { 'F3' => '#f0fdf4', 'F2' => '#fffbeb', default => '#f0fdff' };
+                $ccT = match($p['categoria']) { 'F3' => '#15803d', 'F2' => '#b45309', default => '#0e7490' };
+                $bg  = $i % 2 === 0 ? '#ffffff' : '#f9fafb';
+                $pendHtml .= "<tr style='background:{$bg};border-bottom:1px solid #f3f4f6'>
+                  <td style='padding:10px 14px'>
+                    <span style='background:{$ccB};color:{$ccT};font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;font-family:monospace'>{$p['codigo']}</span>
+                  </td>
+                  <td style='padding:10px 14px;color:#374151;font-size:12px;font-weight:500'>" . htmlspecialchars($p['nombre']) . "</td>
+                  <td style='padding:10px 14px;text-align:center'>
+                    <span style='background:#ede9fe;color:#7c5cbf;font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px'>" . htmlspecialchars($p['responsable'] ?? '—') . "</span>
+                  </td>
                 </tr>";
             }
         }
 
+        // Filas de vencidas
         $vencHtml = '';
-        foreach ($vencidas as $v) {
-            $vencHtml .= "<tr style='border-bottom:1px solid #21262d'>
-              <td style='padding:9px 12px;font-family:monospace;font-size:11px;color:#f85149;font-weight:700'>{$v['codigo']}</td>
-              <td style='padding:9px 12px;color:#c9d1d9;font-size:12px'>" . htmlspecialchars($v['nombre']) . "</td>
-              <td style='padding:9px 12px;text-align:center;color:#f85149;font-size:11px;font-weight:700'>{$MESES[$v['mes']]}</td>
+        foreach ($vencidas as $i => $v) {
+            $bg = $i % 2 === 0 ? '#fff5f5' : '#ffffff';
+            $vencHtml .= "<tr style='background:{$bg};border-bottom:1px solid #fee2e2'>
+              <td style='padding:10px 14px;font-family:monospace;font-size:11px;color:#e55353;font-weight:700'>{$v['codigo']}</td>
+              <td style='padding:10px 14px;color:#374151;font-size:12px'>" . htmlspecialchars($v['nombre']) . "</td>
+              <td style='padding:10px 14px;text-align:center;background:#fee2e2;color:#e55353;font-size:11px;font-weight:700'>{$MESES[$v['mes']]}</td>
             </tr>";
         }
 
         $vencBlock = !empty($vencidas) ? "
-  <tr><td style='background:#161b22;padding:16px 32px 0'>
-    <div style='font-size:13px;font-weight:700;color:#f85149;margin-bottom:10px'>🔴 Vencidas sin ejecución <span style='background:#f8514922;color:#f85149;font-size:10px;padding:2px 8px;border-radius:99px;margin-left:6px'>{$s['vencidas']}</span></div>
-    <div style='background:#1c2333;border:1px solid #f8514930;border-radius:10px;overflow:hidden'>
+  <!-- VENCIDAS -->
+  <tr><td style='background:#ffffff;padding:0 36px 24px'>
+    <div style='border:1px solid #fecaca;border-radius:12px;overflow:hidden'>
+      <div style='background:#fef2f2;padding:12px 16px;border-bottom:1px solid #fecaca'>
+        <span style='font-size:12px;font-weight:700;color:#e55353'>&#x1F534; Actividades vencidas sin ejecución</span>
+        <span style='background:#fee2e2;color:#e55353;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:8px'>{$s['vencidas']}</span>
+      </div>
       <table width='100%' cellpadding='0' cellspacing='0'>
-        <tr style='background:#21262d'>
-          <th style='padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#8b949e'>Código</th>
-          <th style='padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#8b949e'>Actividad</th>
-          <th style='padding:8px 12px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;color:#8b949e'>Mes</th>
+        <tr style='background:#fff5f5'>
+          <th style='padding:8px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;border-bottom:1px solid #fee2e2'>Código</th>
+          <th style='padding:8px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;border-bottom:1px solid #fee2e2'>Actividad</th>
+          <th style='padding:8px 14px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;border-bottom:1px solid #fee2e2'>Mes</th>
         </tr>{$vencHtml}
       </table>
     </div>
   </td></tr>" : '';
 
         return <<<HTML
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#0d1117;font-family:'Segoe UI',Arial,sans-serif">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0d1117;padding:32px 0">
-<tr><td align="center">
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Resumen Semanal — CyberPlan</title>
+</head>
+<body style="margin:0;padding:0;background:#eef2ff;font-family:'Segoe UI',Helvetica,Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,#dce8ff 0%,#ece8ff 60%,#e0f0ff 100%);padding:40px 0;min-height:100vh">
+<tr><td align="center" style="padding:0 16px">
 <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
 
-  <tr><td style="background:#161b22;border-radius:16px 16px 0 0;padding:28px 32px;border-bottom:3px solid #72BF44">
-    <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#8b949e;margin-bottom:8px">AUNOR · Aleatica · CyberPlan</div>
-    <div style="font-size:22px;font-weight:900;color:#e6edf3">📊 Resumen Semanal</div>
-    <div style="font-size:12px;color:#8b949e;margin-top:4px">Semana #{$semana} · {$fecha} · Año {$anio}</div>
-  </td></tr>
-
-  <tr><td style="background:#161b22;padding:22px 32px 0">
+  <!-- HEADER GRADIENTE -->
+  <tr><td style="background:linear-gradient(135deg,#7c5cbf 0%,#5b4a9e 100%);border-radius:18px 18px 0 0;padding:32px 36px 28px">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td width="25%" style="padding-right:6px"><div style="background:#1c2333;border:1px solid #30363d;border-radius:10px;padding:14px;text-align:center;border-top:3px solid #72BF44">
-        <div style="font-size:26px;font-weight:900;color:#e6edf3">{$s['total']}</div>
-        <div style="font-size:9px;font-weight:700;color:#8b949e;text-transform:uppercase;margin-top:3px">Actividades</div>
-      </div></td>
-      <td width="25%" style="padding:0 6px"><div style="background:#1c2333;border:1px solid #30363d;border-radius:10px;padding:14px;text-align:center;border-top:3px solid #00BBE7">
-        <div style="font-size:26px;font-weight:900;color:#e6edf3">{$s['programadas']}</div>
-        <div style="font-size:9px;font-weight:700;color:#8b949e;text-transform:uppercase;margin-top:3px">Programadas</div>
-      </div></td>
-      <td width="25%" style="padding:0 6px"><div style="background:#1c2333;border:1px solid #30363d;border-radius:10px;padding:14px;text-align:center;border-top:3px solid #72BF44">
-        <div style="font-size:26px;font-weight:900;color:#72BF44">{$s['ejecutadas']}</div>
-        <div style="font-size:9px;font-weight:700;color:#8b949e;text-transform:uppercase;margin-top:3px">Ejecutadas</div>
-      </div></td>
-      <td width="25%" style="padding-left:6px"><div style="background:#1c2333;border:1px solid #30363d;border-radius:10px;padding:14px;text-align:center;border-top:3px solid #f85149">
-        <div style="font-size:26px;font-weight:900;color:#f85149">{$s['vencidas']}</div>
-        <div style="font-size:9px;font-weight:700;color:#8b949e;text-transform:uppercase;margin-top:3px">Vencidas</div>
-      </div></td>
+      <td>
+        <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.65);margin-bottom:8px">AUNOR · Aleatica · CyberPlan</div>
+        <div style="font-size:26px;font-weight:800;color:#ffffff;line-height:1.2">Resumen Semanal</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:6px">Semana #{$semana} &nbsp;·&nbsp; {$fecha} &nbsp;·&nbsp; Año {$anio}</div>
+      </td>
+      <td align="right" valign="top">
+        <div style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:12px 18px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:#ffffff;line-height:1">{$cumpl}%</div>
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.65);margin-top:3px">Cumplimiento</div>
+        </div>
+      </td>
     </tr></table>
   </td></tr>
 
-  <tr><td style="background:#161b22;padding:16px 32px 0">
-    <div style="background:#1c2333;border:1px solid #30363d;border-radius:10px;padding:18px">
-      <table width="100%" cellpadding="0" cellspacing="0"><tr>
-        <td><div style="font-size:13px;font-weight:700;color:#c9d1d9">Cumplimiento General</div></td>
-        <td align="right"><div style="font-size:20px;font-weight:900;color:{$barClr}">{$cumpl}%</div></td>
-      </tr></table>
-      <div style="background:#21262d;border-radius:99px;height:7px;margin-top:10px;overflow:hidden">
-        <div style="background:{$barClr};height:7px;border-radius:99px;width:{$barW}%"></div>
-      </div>
-      <div style="font-size:11px;color:#8b949e;margin-top:6px">{$s['ejecutadas']} de {$s['programadas']} ejecutadas al mes actual</div>
+  <!-- BARRA DE PROGRESO -->
+  <tr><td style="background:#ffffff;padding:20px 36px 16px">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td><div style="font-size:13px;font-weight:600;color:#374151">Progreso del año</div></td>
+      <td align="right"><div style="font-size:13px;font-weight:700;color:{$barClr}">{$s['ejecutadas']} / {$s['programadas']} ejecutadas</div></td>
+    </tr></table>
+    <div style="background:#f3f4f6;border-radius:99px;height:8px;margin-top:10px;overflow:hidden">
+      <div style="background:linear-gradient(90deg,{$barClr},{$barClr}cc);height:8px;border-radius:99px;width:{$barW}%"></div>
     </div>
   </td></tr>
 
-  <tr><td style="background:#161b22;padding:16px 32px 0">
-    <div style="font-size:13px;font-weight:700;color:#c9d1d9;margin-bottom:10px">⏳ Pendientes del mes <span style="background:#F99B1C22;color:#F99B1C;font-size:10px;padding:2px 8px;border-radius:99px;margin-left:6px">{$s['programadas']}</span></div>
-    <div style="background:#1c2333;border:1px solid #30363d;border-radius:10px;overflow:hidden">
+  <!-- TARJETAS DE STATS -->
+  <tr><td style="background:#ffffff;padding:0 36px 24px">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td width="25%" style="padding-right:5px">
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:#15803d;line-height:1">{$s['total']}</div>
+          <div style="font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Total</div>
+        </div>
+      </td>
+      <td width="25%" style="padding:0 5px">
+        <div style="background:#f0fdff;border:1px solid #a5f3fc;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:#0e7490;line-height:1">{$s['programadas']}</div>
+          <div style="font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Program.</div>
+        </div>
+      </td>
+      <td width="25%" style="padding:0 5px">
+        <div style="background:#faf5ff;border:1px solid #ddd6fe;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:#7c5cbf;line-height:1">{$s['ejecutadas']}</div>
+          <div style="font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Ejecut.</div>
+        </div>
+      </td>
+      <td width="25%" style="padding-left:5px">
+        <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:#e55353;line-height:1">{$s['vencidas']}</div>
+          <div style="font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-top:4px">Vencidas</div>
+        </div>
+      </td>
+    </tr></table>
+  </td></tr>
+
+  <!-- PENDIENTES DEL MES -->
+  <tr><td style="background:#ffffff;padding:0 36px 24px">
+    <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
+      <div style="background:#f9fafb;padding:12px 16px;border-bottom:1px solid #e5e7eb">
+        <span style="font-size:12px;font-weight:700;color:#374151">&#x23F3; Pendientes del mes actual</span>
+        <span style="background:#fffbeb;color:#b45309;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:8px;border:1px solid #fde68a">{$s['programadas']}</span>
+      </div>
       <table width="100%" cellpadding="0" cellspacing="0">
-        <tr style="background:#21262d">
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#8b949e">Código</th>
-          <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#8b949e">Actividad</th>
-          <th style="padding:8px 12px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;color:#8b949e">Resp.</th>
+        <tr style="background:#f9fafb">
+          <th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;border-bottom:1px solid #f3f4f6">Código</th>
+          <th style="padding:8px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;border-bottom:1px solid #f3f4f6">Actividad</th>
+          <th style="padding:8px 14px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;border-bottom:1px solid #f3f4f6">Resp.</th>
         </tr>
         {$pendHtml}
       </table>
@@ -465,18 +527,20 @@ HTML;
 
   {$vencBlock}
 
-  <tr><td style="background:#161b22;padding:22px 32px">
-    <div style="text-align:center">
-      <a href="{$appUrl}" style="display:inline-block;background:#72BF44;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 30px;border-radius:8px">Abrir CyberPlan →</a>
-    </div>
+  <!-- CTA -->
+  <tr><td style="background:#ffffff;padding:4px 36px 28px;text-align:center">
+    <a href="{$appUrl}" style="display:inline-block;background:#7c5cbf;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:14px 36px;border-radius:10px;letter-spacing:.3px">Abrir CyberPlan &rarr;</a>
   </td></tr>
 
-  <tr><td style="background:#0d1117;border-radius:0 0 16px 16px;padding:16px 32px;border-top:1px solid #21262d;text-align:center">
-    <p style="font-size:11px;color:#484f58;margin:0">Resumen automático · <strong style="color:#8b949e">CyberPlan · AUNOR · Red Vial 4 · {$anio}</strong></p>
+  <!-- FOOTER -->
+  <tr><td style="background:#f0f2ff;border-radius:0 0 18px 18px;padding:18px 36px;border-top:1px solid #e5e7eb;text-align:center">
+    <p style="font-size:11px;color:#9ca3af;margin:0">Resumen automático semanal &nbsp;·&nbsp; <strong style="color:#7c5cbf">CyberPlan &nbsp;·&nbsp; AUNOR &nbsp;·&nbsp; Red Vial 4 &nbsp;·&nbsp; {$anio}</strong></p>
   </td></tr>
 
-</table></td></tr></table>
-</body></html>
+</table>
+</td></tr></table>
+</body>
+</html>
 HTML;
     }
 }
