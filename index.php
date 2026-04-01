@@ -596,11 +596,11 @@ body{font-family:var(--font);background:linear-gradient(135deg,#dce8ff 0%,#ece8f
         <div id="subtareasProgressBar" style="height:6px;border-radius:99px;background:var(--primary);transition:width .3s"></div>
       </div>
     </div>
-    <!-- Lista -->
-    <div id="subtareasList" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;margin-bottom:16px"></div>
-    <!-- Input nueva subtarea -->
-    <div style="display:flex;gap:8px">
-      <input type="text" class="form-input" id="nuevaSubtarea" placeholder="Nueva subtarea..." style="flex:1" onkeydown="if(event.key==='Enter')agregarSubtarea()">
+    <!-- Lista de instancias + subtareas -->
+    <div id="subtareasList" style="max-height:340px;overflow-y:auto;margin-bottom:12px"></div>
+    <!-- Input nueva subtarea (se oculta hasta seleccionar instancia) -->
+    <div id="subtareasInputRow" style="display:none;gap:8px">
+      <input type="text" class="form-input" id="nuevaSubtarea" placeholder="Nueva subtarea para esta instancia..." style="flex:1" onkeydown="if(event.key==='Enter')agregarSubtarea()">
       <button class="btn btn-primary btn-sm" onclick="agregarSubtarea()"><i class="fas fa-plus"></i> Agregar</button>
     </div>
   </div>
@@ -1025,34 +1025,82 @@ function toast(msg, type='success') {
 document.addEventListener('DOMContentLoaded', loadDashboard);
 
 // ── SUBTAREAS ────────────────────────────────
-const SSTATE = { actId: null, actCod: '', actNom: '' };
+const SSTATE = { actId: null, actCod: '', actNom: '', anio: null, mes: null, instancias: [] };
 
 async function openModalSubtareas(btn) {
   SSTATE.actId  = parseInt(btn.dataset.id);
   SSTATE.actCod = btn.dataset.cod;
   SSTATE.actNom = btn.dataset.nom;
+  SSTATE.anio   = null;
+  SSTATE.mes    = null;
   document.getElementById('subtareasTitle').textContent = `Subtareas — ${SSTATE.actCod}`;
   document.getElementById('subtareasActNombre').textContent = SSTATE.actNom;
   document.getElementById('nuevaSubtarea').value = '';
-  await renderSubtareas();
+  document.getElementById('subtareasProgress').style.display = 'none';
+  document.getElementById('subtareasList').innerHTML = '';
   document.getElementById('modalSubtareasOverlay').classList.add('open');
-  setTimeout(() => document.getElementById('nuevaSubtarea').focus(), 200);
+  await renderInstancias();
 }
 function closeModalSubtareas(e) { if (e.target === document.getElementById('modalSubtareasOverlay')) closeModalSubtareasDirect(); }
 function closeModalSubtareasDirect() { document.getElementById('modalSubtareasOverlay').classList.remove('open'); }
 
-async function renderSubtareas() {
+async function renderInstancias() {
   const list = document.getElementById('subtareasList');
   list.innerHTML = '<div class="loading" style="padding:20px"><div class="spinner"></div></div>';
   try {
-    const subs = await api(cronAPI({ action: 'subtareas', actividad_id: SSTATE.actId }));
+    SSTATE.instancias = await api(cronAPI({ action: 'subtareas', actividad_id: SSTATE.actId }));
+    if (!SSTATE.instancias.length) {
+      list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text2);font-size:13px"><i class="fas fa-calendar-xmark" style="font-size:28px;color:var(--text3);display:block;margin-bottom:8px"></i>Esta actividad no tiene meses programados aún.</div>';
+      document.getElementById('subtareasInputRow').style.display = 'none';
+      return;
+    }
+    // Renderizar tabs/botones de instancias
+    list.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+      ${SSTATE.instancias.map(inst => {
+        const pct = inst.total > 0 ? Math.round((inst.completadas / inst.total) * 100) : null;
+        const clr = pct === 100 ? 'var(--green)' : pct > 0 ? 'var(--primary)' : 'var(--text2)';
+        return `<button onclick="seleccionarInstancia(${inst.anio},${inst.mes})"
+          style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;min-width:70px"
+          id="inst-btn-${inst.anio}-${inst.mes}">
+          <span style="font-size:13px;font-weight:700;color:var(--text)">${MESES[inst.mes-1]} ${inst.anio != STATE.anio ? inst.anio : ''}</span>
+          <span style="font-size:10px;font-weight:600;color:${clr}">${inst.total > 0 ? inst.completadas+'/'+inst.total : 'vacío'}</span>
+        </button>`;
+      }).join('')}
+    </div>
+    <div id="subtareasInstanciaContent"></div>`;
+    document.getElementById('subtareasInputRow').style.display = 'none';
+    // Si solo hay una instancia, seleccionarla automáticamente
+    if (SSTATE.instancias.length === 1) seleccionarInstancia(SSTATE.instancias[0].anio, SSTATE.instancias[0].mes);
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function seleccionarInstancia(anio, mes) {
+  SSTATE.anio = anio;
+  SSTATE.mes  = mes;
+  // Destacar botón activo
+  document.querySelectorAll('[id^="inst-btn-"]').forEach(b => {
+    b.style.borderColor = 'var(--border)';
+    b.style.background  = 'var(--surface2)';
+  });
+  const btn = document.getElementById(`inst-btn-${anio}-${mes}`);
+  if (btn) { btn.style.borderColor = 'var(--primary)'; btn.style.background = 'var(--primary-l)'; }
+  document.getElementById('subtareasInputRow').style.display = 'flex';
+  document.getElementById('nuevaSubtarea').value = '';
+  await renderSubtareasInstancia();
+}
+
+async function renderSubtareasInstancia() {
+  const cont = document.getElementById('subtareasInstanciaContent');
+  cont.innerHTML = '<div class="loading" style="padding:16px"><div class="spinner"></div></div>';
+  try {
+    const subs = await api(cronAPI({ action: 'subtareas', actividad_id: SSTATE.actId, anio: SSTATE.anio, mes: SSTATE.mes }));
     if (!subs.length) {
-      list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text2);font-size:13px">Sin subtareas aún. Agrega la primera abajo.</div>';
+      cont.innerHTML = '<div style="text-align:center;padding:20px 0 8px;color:var(--text2);font-size:13px">Sin subtareas para esta instancia.</div>';
     } else {
-      list.innerHTML = subs.map(s => buildSubtareaItem(s)).join('');
+      cont.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${subs.map(s => buildSubtareaItem(s)).join('')}</div>`;
     }
     actualizarProgressBar(subs);
-    actualizarBadge(SSTATE.actId, subs);
+    actualizarBadgeInstancias();
   } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 
@@ -1075,42 +1123,82 @@ function actualizarProgressBar(subs) {
   const done  = subs.filter(s => s.completada == '1').length;
   const pct   = Math.round((done / total) * 100);
   prog.style.display = 'block';
-  bar.style.width = pct + '%';
+  bar.style.width    = pct + '%';
   bar.style.background = pct === 100 ? 'var(--green)' : 'var(--primary)';
-  lbl.textContent = `${done} / ${total} (${pct}%)`;
+  lbl.textContent    = `${done} / ${total} (${pct}%)`;
 }
 
-function actualizarBadge(actId, subs) {
-  const badge = document.getElementById('badge-sub-' + actId);
-  if (!badge) return;
-  const total = subs.length;
-  const done  = subs.filter(s => s.completada == '1').length;
-  badge.parentElement.style.color = total > 0 && done === total ? 'var(--green)' : '';
-  badge.textContent = total > 0 ? `${done}/${total}` : 'Sub';
+async function actualizarBadgeInstancias() {
+  // Refrescar resumen de instancias para actualizar los contadores en los botones
+  try {
+    SSTATE.instancias = await api(cronAPI({ action: 'subtareas', actividad_id: SSTATE.actId }));
+    SSTATE.instancias.forEach(inst => {
+      const btn = document.getElementById(`inst-btn-${inst.anio}-${inst.mes}`);
+      if (!btn) return;
+      const pct = inst.total > 0 ? Math.round((inst.completadas / inst.total) * 100) : null;
+      const clr = pct === 100 ? 'var(--green)' : pct > 0 ? 'var(--primary)' : 'var(--text2)';
+      const span = btn.querySelector('span:last-child');
+      if (span) { span.textContent = inst.total > 0 ? inst.completadas+'/'+inst.total : 'vacío'; span.style.color = clr; }
+    });
+    // Actualizar badge en la fila
+    const totalSubs = SSTATE.instancias.reduce((a,i) => a + parseInt(i.total||0), 0);
+    const doneSubs  = SSTATE.instancias.reduce((a,i) => a + parseInt(i.completadas||0), 0);
+    const badge = document.getElementById('badge-sub-' + SSTATE.actId);
+    if (badge) {
+      badge.textContent = totalSubs > 0 ? `${doneSubs}/${totalSubs}` : 'Sub';
+      badge.closest('button').style.color = totalSubs > 0 && doneSubs === totalSubs ? 'var(--green)' : '';
+    }
+  } catch(_) {}
 }
 
 async function agregarSubtarea() {
   const input  = document.getElementById('nuevaSubtarea');
   const nombre = input.value.trim();
-  if (!nombre) return;
+  if (!nombre || !SSTATE.anio || !SSTATE.mes) return;
   input.value = '';
   try {
-    await api(cronAPI({ action: 'subtarea' }), 'POST', { actividad_id: SSTATE.actId, nombre });
-    await renderSubtareas();
+    await api(cronAPI({ action: 'subtarea' }), 'POST', { actividad_id: SSTATE.actId, anio: SSTATE.anio, mes: SSTATE.mes, nombre });
+    await renderSubtareasInstancia();
   } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 
 async function toggleSubtarea(id) {
   try {
-    await api(cronAPI({ action: 'subtarea' }), 'PUT', { id });
-    await renderSubtareas();
+    const r = await api(cronAPI({ action: 'subtarea' }), 'PUT', { id });
+    await renderSubtareasInstancia();
+
+    if (r.auto_ejecutada) {
+      toast(`✅ Todas las subtareas completadas — actividad marcada como Ejecutada`, 'success');
+      // Actualizar pill E en el cronograma si está visible
+      syncPillEnCronograma(SSTATE.actId, SSTATE.anio, SSTATE.mes, true);
+      // Enviar notificación al frontend igual que toggle manual
+      enviarNotificacionEjecucion(SSTATE.actId, SSTATE.mes);
+    } else if (!r.todas_done && r.total > 0) {
+      // Se desmarcó → si el E fue removido, actualizar pill
+      syncPillEnCronograma(SSTATE.actId, SSTATE.anio, SSTATE.mes, false);
+    }
   } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function syncPillEnCronograma(actId, anio, mes, tieneE) {
+  // Solo aplica si el año del cronograma coincide
+  if (STATE.datos && STATE.anio === anio) {
+    const act = STATE.datos.actividades?.find(x => x.id == actId);
+    if (act) {
+      if (!act.meses[mes]) act.meses[mes] = {};
+      if (tieneE) act.meses[mes]['E'] = { estado: 'completado' };
+      else delete act.meses[mes]['E'];
+      const row = document.querySelector(`tr[data-id="${actId}"]`);
+      if (row) row.outerHTML = buildRow(act, STATE.mesActual);
+    }
+    STATE.stats = null; // invalidar stats del dashboard
+  }
 }
 
 async function eliminarSubtarea(id) {
   try {
     await api(cronAPI({ action: 'subtarea', id }), 'DELETE');
-    await renderSubtareas();
+    await renderSubtareasInstancia();
   } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 </script>

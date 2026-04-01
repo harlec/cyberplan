@@ -228,34 +228,127 @@ function eliminarActividad(PDO $db): never {
 
 function getSubtareas(PDO $db): never {
     $actId = (int)($_GET['actividad_id'] ?? 0);
+    $anio  = (int)($_GET['anio']         ?? 0);
+    $mes   = (int)($_GET['mes']          ?? 0);
     if (!$actId) throw new Exception('actividad_id requerido');
-    $stmt = $db->prepare("SELECT * FROM subtareas WHERE actividad_id=:id ORDER BY orden, id");
+
+    // Si piden una instancia concreta, devuelve sus subtareas
+    if ($anio && $mes) {
+        $stmt = $db->prepare("SELECT * FROM subtareas WHERE actividad_id=:id AND anio=:y AND mes=:m ORDER BY orden, id");
+        $stmt->execute([':id' => $actId, ':y' => $anio, ':m' => $mes]);
+        jsonResponse($stmt->fetchAll());
+    }
+
+    // Sin mes: devuelve resumen de todas las instancias programadas (P) con su conteo
+    $stmt = $db->prepare("
+        SELECT p.mes, p.anio,
+               COUNT(s.id)                             AS total,
+               SUM(COALESCE(s.completada, 0))          AS completadas
+        FROM programacion p
+        LEFT JOIN subtareas s ON s.actividad_id = p.actividad_id
+                              AND s.anio = p.anio AND s.mes = p.mes
+        WHERE p.actividad_id = :id AND p.tipo = 'P'
+        GROUP BY p.anio, p.mes
+        ORDER BY p.anio, p.mes
+    ");
     $stmt->execute([':id' => $actId]);
     jsonResponse($stmt->fetchAll());
 }
 
 function crearSubtarea(PDO $db): never {
-    $data = json_decode(file_get_contents('php://input'), true);
+    $data   = json_decode(file_get_contents('php://input'), true);
     $actId  = (int)($data['actividad_id'] ?? 0);
-    $nombre = trim($data['nombre'] ?? '');
-    if (!$actId || $nombre === '') throw new Exception('Parámetros inválidos');
-    $stmt = $db->prepare("INSERT INTO subtareas (actividad_id, nombre, orden)
-                          SELECT :id, :nom, COALESCE(MAX(orden),0)+1 FROM subtareas WHERE actividad_id=:id2");
-    $stmt->execute([':id' => $actId, ':nom' => $nombre, ':id2' => $actId]);
-    $id = $db->lastInsertId();
+    $anio   = (int)($data['anio']         ?? 0);
+    $mes    = (int)($data['mes']          ?? 0);
+    $nombre = trim($data['nombre']        ?? '');
+    if (!$actId || !$anio || !$mes || $nombre === '') throw new Exception('Parámetros inválidos');
+
+    $stmt = $db->prepare("INSERT INTO subtareas (actividad_id, anio, mes, nombre, orden)
+                          SELECT :id, :y, :m, :nom, COALESCE(MAX(orden),0)+1
+                          FROM subtareas WHERE actividad_id=:id2 AND anio=:y2 AND mes=:m2");
+    $stmt->execute([':id'=>$actId,':y'=>$anio,':m'=>$mes,':nom'=>$nombre,':id2'=>$actId,':y2'=>$anio,':m2'=>$mes]);
     $row = $db->prepare("SELECT * FROM subtareas WHERE id=:id");
-    $row->execute([':id' => $id]);
+    $row->execute([':id' => $db->lastInsertId()]);
     jsonResponse($row->fetch());
 }
 
 function toggleSubtarea(PDO $db): never {
     $data = json_decode(file_get_contents('php://input'), true);
-    $id = (int)($data['id'] ?? 0);
+    $id   = (int)($data['id'] ?? 0);
     if (!$id) throw new Exception('ID requerido');
+
+    // Hacer el toggle
     $db->prepare("UPDATE subtareas SET completada = 1 - completada WHERE id=:id")->execute([':id' => $id]);
-    $row = $db->prepare("SELECT * FROM subtareas WHERE id=:id");
-    $row->execute([':id' => $id]);
-    jsonResponse($row->fetch());
+
+    // Leer la subtarea actualizada para saber actividad/anio/mes
+    $sub = $db->prepare("SELECT * FROM subtareas WHERE id=:id");
+    $sub->execute([':id' => $id]);
+    $subtarea = $sub->fetch();
+
+    $actId = (int)$subtarea['actividad_id'];
+    $anio  = (int)$subtarea['anio'];
+    $mes   = (int)$subtarea['mes'];
+
+    // Verificar si TODAS las subtareas de esta instancia están completadas
+    $stats = $db->prepare("
+        SELECT COUNT(*) as total, SUM(completada) as completadas
+        FROM subtareas WHERE actividad_id=:a AND anio=:y AND mes=:m
+    ");
+    $stats->execute([':a' => $actId, ':y' => $anio, ':m' => $mes]);
+    $r = $stats->fetch();
+    $todasCompletadas = $r['total'] > 0 && (int)$r['completadas'] === (int)$r['total'];
+
+    // Verificar si ya existe un registro E para esta instancia
+    $existeE = $db->prepare("SELECT id FROM programacion WHERE actividad_id=:a AND anio=:y AND mes=:m AND tipo='E'");
+    $existeE->execute([':a' => $actId, ':y' => $anio, ':m' => $mes]);
+    $tieneE = $existeE->fetch();
+
+    $autoMarcado = false;
+    if ($todasCompletadas && !$tieneE) {
+        // Marcar automáticamente como Ejecutada
+        $db->prepare("INSERT INTO programacion (actividad_id, anio, mes, tipo, estado) VALUES (:a,:y,:m,'E','completado')")
+           ->execute([':a' => $actId, ':y' => $anio, ':m' => $mes]);
+        $autoMarcado = true;
+
+        // Disparar notificación por correo (misma lógica que notificar.php)
+        try {
+            require_once __DIR__ . '/../mail/Mailer.php';
+            $cfgStmt = $db->prepare("SELECT valor FROM configuracion WHERE clave='notif_ejecucion'");
+            $cfgStmt->execute();
+            $notifActiva = $cfgStmt->fetchColumn();
+
+            if ($notifActiva !== '0') {
+                $actStmt = $db->prepare("SELECT * FROM actividades WHERE id=:id");
+                $actStmt->execute([':id' => $actId]);
+                $actividad = $actStmt->fetch();
+
+                $mailer = new Mailer();
+                $destinatarios = $mailer->getDestinatariosActividad($actId);
+                if (!empty($destinatarios)) {
+                    $mailer->enviarNotificacionEjecucion($actividad, $mes, $destinatarios);
+                }
+            }
+        } catch (\Exception $e) {
+            error_log('[CyberPlan] Error notificación auto-E: ' . $e->getMessage());
+        }
+
+    } elseif (!$todasCompletadas && $tieneE) {
+        // Si se desmarcó una subtarea, quitar el E automático (solo si fue marcado con subtareas)
+        // Solo eliminar si NO hay subtareas pendientes marcadas manualmente
+        // (conservamos el E si el total de subtareas es 0, es decir fue marcado a mano)
+        if ((int)$r['total'] > 0) {
+            $db->prepare("DELETE FROM programacion WHERE actividad_id=:a AND anio=:y AND mes=:m AND tipo='E'")
+               ->execute([':a' => $actId, ':y' => $anio, ':m' => $mes]);
+        }
+    }
+
+    jsonResponse([
+        'subtarea'      => $subtarea,
+        'todas_done'    => $todasCompletadas,
+        'auto_ejecutada'=> $autoMarcado,
+        'total'         => (int)$r['total'],
+        'completadas'   => (int)$r['completadas'],
+    ]);
 }
 
 function eliminarSubtarea(PDO $db): never {
