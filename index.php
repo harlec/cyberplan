@@ -602,7 +602,7 @@ body{font-family:var(--font);background:linear-gradient(135deg,#dce8ff 0%,#ece8f
 
 <!-- MODAL SUBTAREAS -->
 <div class="modal-overlay" id="modalSubtareasOverlay" onclick="closeModalSubtareas(event)">
-  <div class="modal" style="max-width:540px">
+  <div class="modal" style="max-width:560px">
     <div class="modal-header">
       <div>
         <div class="modal-title" id="subtareasTitle">Subtareas</div>
@@ -610,21 +610,21 @@ body{font-family:var(--font);background:linear-gradient(135deg,#dce8ff 0%,#ece8f
       </div>
       <button class="modal-close" onclick="closeModalSubtareasDirect()"><i class="fas fa-times"></i></button>
     </div>
-    <!-- Progreso -->
+    <!-- Barra de progreso de instancia seleccionada -->
     <div id="subtareasProgress" style="margin-bottom:16px;display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span style="font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Progreso</span>
+        <span style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Progreso instancia</span>
         <span id="subtareasProgressLabel" style="font-size:14px;font-weight:700;color:var(--primary)"></span>
       </div>
       <div style="background:var(--surface2);border-radius:99px;height:6px;overflow:hidden">
         <div id="subtareasProgressBar" style="height:6px;border-radius:99px;background:var(--primary);transition:width .3s"></div>
       </div>
     </div>
-    <!-- Lista de instancias + subtareas -->
-    <div id="subtareasList" style="max-height:340px;overflow-y:auto;margin-bottom:12px"></div>
-    <!-- Input nueva subtarea (se oculta hasta seleccionar instancia) -->
-    <div id="subtareasInputRow" style="display:none;gap:8px">
-      <input type="text" class="form-input" id="nuevaSubtarea" placeholder="Nueva subtarea para esta instancia..." style="flex:1" onkeydown="if(event.key==='Enter')agregarSubtarea()">
+    <!-- Instancias + lista de subtareas -->
+    <div id="subtareasList" style="max-height:380px;overflow-y:auto;margin-bottom:14px"></div>
+    <!-- Input agregar subtarea (siempre visible) -->
+    <div style="display:flex;gap:8px">
+      <input type="text" class="form-input" id="nuevaSubtarea" placeholder="Nueva subtarea de la actividad..." style="flex:1;font-size:14px" onkeydown="if(event.key==='Enter')agregarSubtarea()">
       <button class="btn btn-primary btn-sm" onclick="agregarSubtarea()"><i class="fas fa-plus"></i> Agregar</button>
     </div>
   </div>
@@ -1080,7 +1080,9 @@ function toast(msg, type='success') {
 document.addEventListener('DOMContentLoaded', () => { applyThemeIcon(); loadDashboard(); });
 
 // ── SUBTAREAS ────────────────────────────────
-const SSTATE = { actId: null, actCod: '', actNom: '', anio: null, mes: null, instancias: [] };
+// Subtareas se definen una vez por actividad (plantillas).
+// El estado completado se guarda por instancia (anio+mes).
+const SSTATE = { actId: null, actCod: '', actNom: '', anio: null, mes: null, templates: [], instancias: [] };
 
 async function openModalSubtareas(btn) {
   SSTATE.actId  = parseInt(btn.dataset.id);
@@ -1092,81 +1094,111 @@ async function openModalSubtareas(btn) {
   document.getElementById('subtareasActNombre').textContent = SSTATE.actNom;
   document.getElementById('nuevaSubtarea').value = '';
   document.getElementById('subtareasProgress').style.display = 'none';
-  document.getElementById('subtareasList').innerHTML = '';
+  document.getElementById('subtareasList').innerHTML = '<div class="loading" style="padding:20px"><div class="spinner"></div></div>';
   document.getElementById('modalSubtareasOverlay').classList.add('open');
-  await renderInstancias();
+  await refreshModal(false);
+  if (SSTATE.instancias.length === 1) seleccionarInstancia(SSTATE.instancias[0].anio, SSTATE.instancias[0].mes);
 }
 function closeModalSubtareas(e) { if (e.target === document.getElementById('modalSubtareasOverlay')) closeModalSubtareasDirect(); }
 function closeModalSubtareasDirect() { document.getElementById('modalSubtareasOverlay').classList.remove('open'); }
 
-async function renderInstancias() {
-  const list = document.getElementById('subtareasList');
-  list.innerHTML = '<div class="loading" style="padding:20px"><div class="spinner"></div></div>';
+// Recarga templates + resumen de instancias; si keepInstance, recarga estado de la instancia activa
+async function refreshModal(keepInstance = true) {
   try {
-    SSTATE.instancias = await api(cronAPI({ action: 'subtareas', actividad_id: SSTATE.actId }));
-    if (!SSTATE.instancias.length) {
-      list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text2);font-size:13px"><i class="fas fa-calendar-xmark" style="font-size:28px;color:var(--text3);display:block;margin-bottom:8px"></i>Esta actividad no tiene meses programados aún.</div>';
-      document.getElementById('subtareasInputRow').style.display = 'none';
-      return;
+    [SSTATE.templates, SSTATE.instancias] = await Promise.all([
+      api(cronAPI({ action: 'subtareas', actividad_id: SSTATE.actId })),
+      api(cronAPI({ action: 'subtareas', actividad_id: SSTATE.actId, resumen: 1 }))
+    ]);
+    if (keepInstance && SSTATE.anio && SSTATE.mes) {
+      const subs = await api(cronAPI({ action: 'subtareas', actividad_id: SSTATE.actId, anio: SSTATE.anio, mes: SSTATE.mes }));
+      const estados = Object.fromEntries(subs.map(s => [s.id, parseInt(s.completada)]));
+      renderModalContent(estados, SSTATE.anio, SSTATE.mes);
+      actualizarProgressBar(subs);
+    } else {
+      renderModalContent(null, null, null);
+      document.getElementById('subtareasProgress').style.display = 'none';
     }
-    // Renderizar tabs/botones de instancias
-    list.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px">
-      ${SSTATE.instancias.map(inst => {
-        const pct = inst.total > 0 ? Math.round((inst.completadas / inst.total) * 100) : null;
-        const clr = pct === 100 ? 'var(--green)' : pct > 0 ? 'var(--primary)' : 'var(--text2)';
-        return `<button onclick="seleccionarInstancia(${inst.anio},${inst.mes})"
-          style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;min-width:70px"
-          id="inst-btn-${inst.anio}-${inst.mes}">
-          <span style="font-size:15px;font-weight:700;color:var(--text)">${MESES[inst.mes-1]} ${inst.anio != STATE.anio ? inst.anio : ''}</span>
-          <span style="font-size:12px;font-weight:600;color:${clr}">${inst.total > 0 ? inst.completadas+'/'+inst.total : 'vacío'}</span>
-        </button>`;
-      }).join('')}
-    </div>
-    <div id="subtareasInstanciaContent"></div>`;
-    document.getElementById('subtareasInputRow').style.display = 'none';
-    // Si solo hay una instancia, seleccionarla automáticamente
-    if (SSTATE.instancias.length === 1) seleccionarInstancia(SSTATE.instancias[0].anio, SSTATE.instancias[0].mes);
+    actualizarRowBadge();
   } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function renderModalContent(estados, selAnio, selMes) {
+  const list = document.getElementById('subtareasList');
+
+  // — Selector de instancias —
+  let instHTML;
+  if (SSTATE.instancias.length) {
+    instHTML = `<div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+        Instancia planificada <span style="opacity:.55;font-weight:400;text-transform:none;letter-spacing:0">· selecciona para marcar progreso</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${SSTATE.instancias.map(inst => {
+          const tot = parseInt(inst.total || 0);
+          const com = parseInt(inst.completadas || 0);
+          const pct = tot > 0 ? Math.round((com / tot) * 100) : null;
+          const clr = pct === 100 ? 'var(--green)' : pct > 0 ? 'var(--primary)' : 'var(--text3)';
+          const active = inst.anio == selAnio && inst.mes == selMes;
+          return `<button onclick="seleccionarInstancia(${inst.anio},${inst.mes})"
+            id="inst-btn-${inst.anio}-${inst.mes}"
+            style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 14px;
+              background:${active ? 'var(--primary-l)' : 'var(--surface2)'};
+              border:1.5px solid ${active ? 'var(--primary)' : 'var(--border)'};
+              border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;min-width:65px">
+            <span style="font-size:14px;font-weight:700;color:var(--text)">${MESES[inst.mes-1]}${inst.anio != STATE.anio ? ' '+inst.anio : ''}</span>
+            <span style="font-size:11px;font-weight:600;color:${clr}">${tot > 0 ? com+'/'+tot : '—'}</span>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>`;
+  } else {
+    instHTML = `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px;color:var(--text2);font-size:13px">
+      <i class="fas fa-calendar-xmark" style="color:var(--text3);margin-right:6px"></i>
+      Sin instancias planificadas — marca <span style="font-family:var(--mono);font-weight:700;color:var(--teal)">P</span> en el cronograma primero.
+    </div>`;
+  }
+
+  // — Lista de subtareas —
+  const hasInst = selAnio !== null;
+  let subsHTML = `<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+    Subtareas${hasInst ? ` · ${MESES[selMes-1]}${selAnio != STATE.anio ? ' '+selAnio : ''}` : ' · comunes a todas las instancias'}
+  </div>`;
+
+  if (SSTATE.templates.length) {
+    subsHTML += `<div style="display:flex;flex-direction:column;gap:6px">
+      ${SSTATE.templates.map(s => {
+        const completada = (hasInst && estados) ? (estados[s.id] ?? 0) : -1;
+        const done     = completada === 1;
+        const disabled = completada === -1;
+        return `<div class="subtarea-item${done ? ' done' : ''}" id="sub-item-${s.id}">
+          <div class="subtarea-check${done ? ' done' : ''}"
+            ${!disabled ? `onclick="toggleSubtarea(${s.id})"` : ''}
+            style="${disabled ? 'opacity:.3;cursor:default' : ''}">
+            ${done ? '<i class="fas fa-check" style="font-size:10px"></i>' : ''}
+          </div>
+          <span class="subtarea-nombre" style="${disabled ? 'opacity:.45' : ''}">${s.nombre}</span>
+          <button class="subtarea-del" onclick="eliminarSubtarea(${s.id})" title="Eliminar de todas las instancias"><i class="fas fa-times"></i></button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  } else {
+    subsHTML += `<div style="text-align:center;padding:18px;color:var(--text3);font-size:13px">
+      <i class="fas fa-list-check" style="font-size:24px;display:block;margin-bottom:6px"></i>Sin subtareas. Agrega una abajo.
+    </div>`;
+  }
+
+  list.innerHTML = instHTML + subsHTML;
 }
 
 async function seleccionarInstancia(anio, mes) {
   SSTATE.anio = anio;
   SSTATE.mes  = mes;
-  // Destacar botón activo
-  document.querySelectorAll('[id^="inst-btn-"]').forEach(b => {
-    b.style.borderColor = 'var(--border)';
-    b.style.background  = 'var(--surface2)';
-  });
-  const btn = document.getElementById(`inst-btn-${anio}-${mes}`);
-  if (btn) { btn.style.borderColor = 'var(--primary)'; btn.style.background = 'var(--primary-l)'; }
-  document.getElementById('subtareasInputRow').style.display = 'flex';
-  document.getElementById('nuevaSubtarea').value = '';
-  await renderSubtareasInstancia();
-}
-
-async function renderSubtareasInstancia() {
-  const cont = document.getElementById('subtareasInstanciaContent');
-  cont.innerHTML = '<div class="loading" style="padding:16px"><div class="spinner"></div></div>';
   try {
-    const subs = await api(cronAPI({ action: 'subtareas', actividad_id: SSTATE.actId, anio: SSTATE.anio, mes: SSTATE.mes }));
-    if (!subs.length) {
-      cont.innerHTML = '<div style="text-align:center;padding:20px 0 8px;color:var(--text2);font-size:13px">Sin subtareas para esta instancia.</div>';
-    } else {
-      cont.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${subs.map(s => buildSubtareaItem(s)).join('')}</div>`;
-    }
+    const subs = await api(cronAPI({ action: 'subtareas', actividad_id: SSTATE.actId, anio, mes }));
+    const estados = Object.fromEntries(subs.map(s => [s.id, parseInt(s.completada)]));
+    renderModalContent(estados, anio, mes);
     actualizarProgressBar(subs);
-    actualizarBadgeInstancias();
   } catch(e) { toast('Error: ' + e.message, 'error'); }
-}
-
-function buildSubtareaItem(s) {
-  return `<div class="subtarea-item${s.completada=='1'?' done':''}" id="sub-item-${s.id}">
-    <div class="subtarea-check${s.completada=='1'?' done':''}" onclick="toggleSubtarea(${s.id})">
-      ${s.completada=='1' ? '<i class="fas fa-check" style="font-size:10px"></i>' : ''}
-    </div>
-    <span class="subtarea-nombre">${s.nombre}</span>
-    <button class="subtarea-del" onclick="eliminarSubtarea(${s.id})" title="Eliminar"><i class="fas fa-times"></i></button>
-  </div>`;
 }
 
 function actualizarProgressBar(subs) {
@@ -1175,7 +1207,7 @@ function actualizarProgressBar(subs) {
   const lbl  = document.getElementById('subtareasProgressLabel');
   if (!subs.length) { prog.style.display = 'none'; return; }
   const total = subs.length;
-  const done  = subs.filter(s => s.completada == '1').length;
+  const done  = subs.filter(s => parseInt(s.completada) === 1).length;
   const pct   = Math.round((done / total) * 100);
   prog.style.display = 'block';
   bar.style.width    = pct + '%';
@@ -1183,60 +1215,41 @@ function actualizarProgressBar(subs) {
   lbl.textContent    = `${done} / ${total} (${pct}%)`;
 }
 
-async function actualizarBadgeInstancias() {
-  // Refrescar resumen de instancias para actualizar los contadores en los botones
-  try {
-    SSTATE.instancias = await api(cronAPI({ action: 'subtareas', actividad_id: SSTATE.actId }));
-    SSTATE.instancias.forEach(inst => {
-      const btn = document.getElementById(`inst-btn-${inst.anio}-${inst.mes}`);
-      if (!btn) return;
-      const pct = inst.total > 0 ? Math.round((inst.completadas / inst.total) * 100) : null;
-      const clr = pct === 100 ? 'var(--green)' : pct > 0 ? 'var(--primary)' : 'var(--text2)';
-      const span = btn.querySelector('span:last-child');
-      if (span) { span.textContent = inst.total > 0 ? inst.completadas+'/'+inst.total : 'vacío'; span.style.color = clr; }
-    });
-    // Actualizar badge en la fila
-    const totalSubs = SSTATE.instancias.reduce((a,i) => a + parseInt(i.total||0), 0);
-    const doneSubs  = SSTATE.instancias.reduce((a,i) => a + parseInt(i.completadas||0), 0);
-    const badge = document.getElementById('badge-sub-' + SSTATE.actId);
-    if (badge) {
-      badge.textContent = totalSubs > 0 ? `${doneSubs}/${totalSubs}` : 'Sub';
-      badge.closest('button').style.color = totalSubs > 0 && doneSubs === totalSubs ? 'var(--green)' : '';
-    }
-  } catch(_) {}
+function actualizarRowBadge() {
+  const badge = document.getElementById('badge-sub-' + SSTATE.actId);
+  if (!badge) return;
+  const n = SSTATE.templates.length;
+  badge.textContent = n > 0 ? `${n} sub` : 'Sub';
+  badge.closest?.('button')?.style && (badge.closest('button').style.color = '');
 }
 
 async function agregarSubtarea() {
   const input  = document.getElementById('nuevaSubtarea');
   const nombre = input.value.trim();
-  if (!nombre || !SSTATE.anio || !SSTATE.mes) return;
+  if (!nombre) return;
   input.value = '';
   try {
-    await api(cronAPI({ action: 'subtarea' }), 'POST', { actividad_id: SSTATE.actId, anio: SSTATE.anio, mes: SSTATE.mes, nombre });
-    await renderSubtareasInstancia();
+    await api(cronAPI({ action: 'subtarea' }), 'POST', { actividad_id: SSTATE.actId, nombre });
+    await refreshModal(true);
   } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 
 async function toggleSubtarea(id) {
+  if (!SSTATE.anio || !SSTATE.mes) return;
   try {
-    const r = await api(cronAPI({ action: 'subtarea' }), 'PUT', { id });
-    await renderSubtareasInstancia();
-
+    const r = await api(cronAPI({ action: 'subtarea' }), 'PUT', { id, anio: SSTATE.anio, mes: SSTATE.mes });
+    await refreshModal(true);
     if (r.auto_ejecutada) {
-      toast(`✅ Todas las subtareas completadas — actividad marcada como Ejecutada`, 'success');
-      // Actualizar pill E en el cronograma si está visible
+      toast('✅ Todas las subtareas completadas — actividad marcada como Ejecutada', 'success');
       syncPillEnCronograma(SSTATE.actId, SSTATE.anio, SSTATE.mes, true);
-      // Enviar notificación al frontend igual que toggle manual
       enviarNotificacionEjecucion(SSTATE.actId, SSTATE.mes);
     } else if (!r.todas_done && r.total > 0) {
-      // Se desmarcó → si el E fue removido, actualizar pill
       syncPillEnCronograma(SSTATE.actId, SSTATE.anio, SSTATE.mes, false);
     }
   } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 
 function syncPillEnCronograma(actId, anio, mes, tieneE) {
-  // Solo aplica si el año del cronograma coincide
   if (STATE.datos && STATE.anio === anio) {
     const act = STATE.datos.actividades?.find(x => x.id == actId);
     if (act) {
@@ -1246,14 +1259,15 @@ function syncPillEnCronograma(actId, anio, mes, tieneE) {
       const row = document.querySelector(`tr[data-id="${actId}"]`);
       if (row) row.outerHTML = buildRow(act, STATE.mesActual);
     }
-    STATE.stats = null; // invalidar stats del dashboard
+    STATE.stats = null;
   }
 }
 
 async function eliminarSubtarea(id) {
+  if (!confirm('¿Eliminar esta subtarea? Se eliminará de todas las instancias.')) return;
   try {
     await api(cronAPI({ action: 'subtarea', id }), 'DELETE');
-    await renderSubtareasInstancia();
+    await refreshModal(true);
   } catch(e) { toast('Error: ' + e.message, 'error'); }
 }
 </script>
