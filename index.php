@@ -13,6 +13,7 @@ $anios_disponibles = range(2024, 2027);
 <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>!function(){var t=localStorage.getItem('cyberplan_theme')||'light';document.documentElement.setAttribute('data-theme',t)}();</script>
 <style>
 :root {
   --primary:   #7c5cbf; --primary-d: #6347a8; --primary-l: rgba(124,92,191,.1);
@@ -31,6 +32,28 @@ $anios_disponibles = range(2024, 2027);
   --font: 'Titillium Web', sans-serif; --mono: 'JetBrains Mono', monospace;
   --sidebar-w: 240px; --header-h: 68px;
 }
+/* ── DARK THEME ─────────────────────────────────────────── */
+[data-theme="dark"] {
+  --primary:   #9b7fd4; --primary-d: #8b6dc4; --primary-l: rgba(155,127,212,.15);
+  --teal:      #00d9e6; --teal-l: rgba(0,217,230,.12);
+  --orange:    #f7b731; --orange-l: rgba(247,183,49,.12);
+  --green:     #3ddc84; --green-l: rgba(61,220,132,.12);
+  --red:       #ff6b6b; --red-l: rgba(255,107,107,.12);
+  --bg:        #0e1018;
+  --surface:   #181c28; --surface2: #1e2336; --surface3: #242840;
+  --border:    rgba(255,255,255,.07); --border2: rgba(255,255,255,.13);
+  --text:      #eef0f6; --text2:  #b0b8cc; --text3: #707a90;
+  --shadow:    0 2px 16px rgba(0,0,0,.35);
+  --shadow-lg: 0 12px 48px rgba(0,0,0,.5);
+  --shadow-card: 0 2px 12px rgba(0,0,0,.25);
+}
+[data-theme="dark"] body{background:linear-gradient(135deg,#0e1018 0%,#131623 55%,#0f1520 100%) fixed}
+[data-theme="dark"] .header{background:rgba(24,28,40,.88)}
+[data-theme="dark"] .sidebar-nav a.active{background:var(--surface2);color:var(--primary);box-shadow:0 2px 12px rgba(0,0,0,.3)}
+[data-theme="dark"] .modal-overlay{background:rgba(0,0,0,.7)}
+[data-theme="dark"] .modal{box-shadow:0 24px 64px rgba(0,0,0,.5)}
+/* ──────────────────────────────────────────────────────── */
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{font-family:var(--font);background:linear-gradient(135deg,#dce8ff 0%,#ece8ff 55%,#e0f0ff 100%) fixed;background-attachment:fixed;color:var(--text);min-height:100vh;display:flex;overflow-x:hidden;font-size:15px}
@@ -300,6 +323,7 @@ body{font-family:var(--font);background:linear-gradient(135deg,#dce8ff 0%,#ece8f
           <?php endforeach; ?>
         </select>
       </div>
+      <button class="btn btn-ghost btn-sm" id="themeToggleBtn" onclick="toggleTheme()" title="Cambiar tema"><i class="fas fa-moon" id="themeIcon"></i></button>
       <button class="btn btn-ghost btn-sm" onclick="location.reload()"><i class="fas fa-rotate-right"></i></button>
       <button class="btn btn-primary btn-sm" onclick="openModalNueva()"><i class="fas fa-plus"></i> Nueva</button>
     </div>
@@ -609,6 +633,24 @@ body{font-family:var(--font);background:linear-gradient(135deg,#dce8ff 0%,#ece8f
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
+/* ── THEME ───────────────────────────────────────────────── */
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  const next = isDark ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('cyberplan_theme', next);
+  document.getElementById('themeIcon').className = next === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+  // re-render charts with new colors
+  if (STATE.stats) renderCharts(STATE.stats);
+}
+
+function applyThemeIcon() {
+  const icon = document.getElementById('themeIcon');
+  if (icon) icon.className = document.documentElement.getAttribute('data-theme') === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+}
+/* ─────────────────────────────────────────────────────────── */
+
 const STATE = { anio: <?= $anio_actual ?>, mesActual: <?= date('n') ?>, datos: null, stats: null, charts: {}, usuarios: [], actividades: [] };
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
 const MESES_F = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
@@ -662,22 +704,35 @@ function renderStats(s) {
 }
 
 function renderCharts(s) {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const tickClr   = dark ? '#707a90' : '#6b7280';
+  const gridClr   = dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.04)';
+  const tipBg     = dark ? '#1e2336' : '#fff';
+  const tipTitle  = dark ? '#eef0f6' : '#1e1e2d';
+  const tipBody   = dark ? '#b0b8cc' : '#6b7280';
+  const tipBorder = dark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.08)';
+  const gaugeBg   = dark ? '#242840' : '#f0f2ff';
+  const primary   = dark ? '#9b7fd4' : '#7c5cbf';
+  const teal      = dark ? '#00d9e6' : '#00c8d4';
+
   const lbl = s.por_mes.map(m => MESES[m.mes-1]);
   const ctx = document.getElementById('monthlyChart').getContext('2d');
   if (STATE.charts.bar) STATE.charts.bar.destroy();
   STATE.charts.bar = new Chart(ctx, { type: 'bar', data: { labels: lbl, datasets: [
-    { label:'Programadas', data: s.por_mes.map(m=>+m.programadas||0), backgroundColor:'rgba(0,200,212,.18)', borderColor:'#00c8d4', borderWidth:1.5, borderRadius:6 },
-    { label:'Ejecutadas',  data: s.por_mes.map(m=>+m.ejecutadas||0),  backgroundColor:'rgba(124,92,191,.22)', borderColor:'#7c5cbf', borderWidth:1.5, borderRadius:6 },
-  ]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'#6b7280', font:{family:'Titillium Web',size:11} } }, tooltip:{backgroundColor:'#fff',borderColor:'rgba(0,0,0,.08)',borderWidth:1,titleColor:'#1e1e2d',bodyColor:'#6b7280',boxShadow:'0 4px 20px rgba(0,0,0,.1)'} }, scales:{ x:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:'rgba(0,0,0,.04)'}}, y:{ticks:{color:'#6b7280',stepSize:1},grid:{color:'rgba(0,0,0,.04)'},beginAtZero:true} } }});
+    { label:'Programadas', data: s.por_mes.map(m=>+m.programadas||0), backgroundColor: dark?'rgba(0,217,230,.15)':'rgba(0,200,212,.18)', borderColor:teal, borderWidth:1.5, borderRadius:6 },
+    { label:'Ejecutadas',  data: s.por_mes.map(m=>+m.ejecutadas||0),  backgroundColor: dark?'rgba(155,127,212,.2)':'rgba(124,92,191,.22)', borderColor:primary, borderWidth:1.5, borderRadius:6 },
+  ]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:tickClr, font:{family:'Titillium Web',size:11} } }, tooltip:{backgroundColor:tipBg,borderColor:tipBorder,borderWidth:1,titleColor:tipTitle,bodyColor:tipBody} }, scales:{ x:{ticks:{color:tickClr,font:{size:10}},grid:{color:gridClr}}, y:{ticks:{color:tickClr,stepSize:1},grid:{color:gridClr},beginAtZero:true} } }});
 
   const pct = s.cumplimiento_pct;
   const gCtx = document.getElementById('gaugeChart').getContext('2d');
   if (STATE.charts.gauge) STATE.charts.gauge.destroy();
-  STATE.charts.gauge = new Chart(gCtx, { type:'doughnut', data:{ datasets:[{ data:[pct,100-pct], backgroundColor:[pct>=80?'#7c5cbf':pct>=50?'#f7b731':'#e55353','#f0f2ff'], borderWidth:0, borderRadius:4 }]}, options:{ responsive:false, rotation:-90, circumference:180, plugins:{legend:{display:false},tooltip:{enabled:false}}, cutout:'72%'}});
+  const gaugeClr = pct>=80 ? primary : pct>=50 ? '#f7b731' : (dark?'#ff6b6b':'#e55353');
+  STATE.charts.gauge = new Chart(gCtx, { type:'doughnut', data:{ datasets:[{ data:[pct,100-pct], backgroundColor:[gaugeClr, gaugeBg], borderWidth:0, borderRadius:4 }]}, options:{ responsive:false, rotation:-90, circumference:180, plugins:{legend:{display:false},tooltip:{enabled:false}}, cutout:'72%'}});
   document.getElementById('gaugePct').textContent = pct + '%';
-  const clr = {F1:'#00c8d4',F2:'#f7b731',F3:'#2ecc71'};
+  const clr = {F1: teal, F2:'#f7b731', F3: dark?'#3ddc84':'#2ecc71'};
+  const redClr = dark ? '#ff6b6b' : '#e55353';
   document.getElementById('legendList').innerHTML = s.por_categoria.map(c=>`<div class="legend-item"><div class="legend-left"><div class="legend-dot" style="background:${clr[c.categoria]||'#ccc'}"></div>Categoría ${c.categoria}</div><span class="legend-val">${c.total}</span></div>`).join('') +
-    `<div class="legend-item"><div class="legend-left"><div class="legend-dot" style="background:#e55353"></div>Vencidas</div><span class="legend-val" style="color:#e55353">${s.vencidas}</span></div>`;
+    `<div class="legend-item"><div class="legend-left"><div class="legend-dot" style="background:${redClr}"></div>Vencidas</div><span class="legend-val" style="color:${redClr}">${s.vencidas}</span></div>`;
 }
 
 function renderActMes() {
@@ -1022,7 +1077,7 @@ function toast(msg, type='success') {
   setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(40px)';setTimeout(()=>t.remove(),300);},4000);
 }
 
-document.addEventListener('DOMContentLoaded', loadDashboard);
+document.addEventListener('DOMContentLoaded', () => { applyThemeIcon(); loadDashboard(); });
 
 // ── SUBTAREAS ────────────────────────────────
 const SSTATE = { actId: null, actCod: '', actNom: '', anio: null, mes: null, instancias: [] };
