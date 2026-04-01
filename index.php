@@ -237,6 +237,19 @@ body{font-family:var(--font);background:linear-gradient(135deg,#dce8ff 0%,#ece8f
 /* NOTIF BADGE */
 .notif-sending{animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* SUBTAREAS */
+.subtarea-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);transition:background .15s}
+.subtarea-item.done{opacity:.6}
+.subtarea-item.done .subtarea-nombre{text-decoration:line-through;color:var(--text2)}
+.subtarea-check{width:18px;height:18px;border-radius:5px;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s}
+.subtarea-check.done{background:var(--primary);border-color:var(--primary);color:#fff}
+.subtarea-nombre{flex:1;font-size:13px;font-weight:500;color:var(--text)}
+.subtarea-del{background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 5px;border-radius:4px;font-size:12px;transition:color .15s;opacity:0}
+.subtarea-item:hover .subtarea-del{opacity:1}
+.subtarea-del:hover{color:var(--red)}
+.subtareas-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:var(--primary-l);color:var(--primary);cursor:pointer;transition:background .15s}
+.subtareas-badge:hover{background:rgba(124,92,191,.18)}
 </style>
 </head>
 <body>
@@ -563,6 +576,36 @@ body{font-family:var(--font);background:linear-gradient(135deg,#dce8ff 0%,#ece8f
   </div>
 </div>
 
+<!-- MODAL SUBTAREAS -->
+<div class="modal-overlay" id="modalSubtareasOverlay" onclick="closeModalSubtareas(event)">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="subtareasTitle">Subtareas</div>
+        <div id="subtareasActNombre" style="font-size:11.5px;color:var(--text2);margin-top:2px"></div>
+      </div>
+      <button class="modal-close" onclick="closeModalSubtareasDirect()"><i class="fas fa-times"></i></button>
+    </div>
+    <!-- Progreso -->
+    <div id="subtareasProgress" style="margin-bottom:16px;display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Progreso</span>
+        <span id="subtareasProgressLabel" style="font-size:12px;font-weight:700;color:var(--primary)"></span>
+      </div>
+      <div style="background:var(--surface2);border-radius:99px;height:6px;overflow:hidden">
+        <div id="subtareasProgressBar" style="height:6px;border-radius:99px;background:var(--primary);transition:width .3s"></div>
+      </div>
+    </div>
+    <!-- Lista -->
+    <div id="subtareasList" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow-y:auto;margin-bottom:16px"></div>
+    <!-- Input nueva subtarea -->
+    <div style="display:flex;gap:8px">
+      <input type="text" class="form-input" id="nuevaSubtarea" placeholder="Nueva subtarea..." style="flex:1" onkeydown="if(event.key==='Enter')agregarSubtarea()">
+      <button class="btn btn-primary btn-sm" onclick="agregarSubtarea()"><i class="fas fa-plus"></i> Agregar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
@@ -681,7 +724,8 @@ function buildRow(a, mesActual) {
     <td style="text-align:center">${a.responsable?`<span class="badge-resp">${a.responsable}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
     ${cells}
     <td style="text-align:center;white-space:nowrap">
-      <button class="btn btn-ghost btn-sm" onclick="editAct(${a.id})"><i class="fas fa-pen"></i></button>
+      <button class="subtareas-badge" data-id="${a.id}" data-cod="${a.codigo}" data-nom="${a.nombre.replace(/"/g,'&quot;')}" onclick="openModalSubtareas(this)"><i class="fas fa-list-ul"></i> <span id="badge-sub-${a.id}">Sub</span></button>
+      <button class="btn btn-ghost btn-sm" onclick="editAct(${a.id})" style="margin-left:4px"><i class="fas fa-pen"></i></button>
       <button class="btn btn-danger btn-sm" onclick="deleteAct(${a.id})" style="margin-left:4px"><i class="fas fa-trash"></i></button>
     </td></tr>`;
 }
@@ -740,7 +784,8 @@ async function loadActividadesTable() {
       <td style="text-align:center">${a.responsable?`<span class="badge-resp">${a.responsable}</span>`:'—'}</td>
       <td style="text-align:center;color:var(--text2);font-weight:700">${a.anio}</td>
       <td style="text-align:center;white-space:nowrap">
-        <button class="btn btn-ghost btn-sm" onclick="editAct(${a.id})"><i class="fas fa-pen"></i></button>
+        <button class="subtareas-badge" data-id="${a.id}" data-cod="${a.codigo}" data-nom="${a.nombre.replace(/"/g,'&quot;')}" onclick="openModalSubtareas(this)"><i class="fas fa-list-ul"></i> <span id="badge-sub-${a.id}">Sub</span></button>
+        <button class="btn btn-ghost btn-sm" onclick="editAct(${a.id})" style="margin-left:4px"><i class="fas fa-pen"></i></button>
         <button class="btn btn-danger btn-sm" onclick="deleteAct(${a.id})" style="margin-left:4px"><i class="fas fa-trash"></i></button>
       </td></tr>`).join('')}</tbody></table>`;
   } catch(e) { toast('Error: '+e.message,'error'); }
@@ -978,6 +1023,96 @@ function toast(msg, type='success') {
 }
 
 document.addEventListener('DOMContentLoaded', loadDashboard);
+
+// ── SUBTAREAS ────────────────────────────────
+const SSTATE = { actId: null, actCod: '', actNom: '' };
+
+async function openModalSubtareas(btn) {
+  SSTATE.actId  = parseInt(btn.dataset.id);
+  SSTATE.actCod = btn.dataset.cod;
+  SSTATE.actNom = btn.dataset.nom;
+  document.getElementById('subtareasTitle').textContent = `Subtareas — ${SSTATE.actCod}`;
+  document.getElementById('subtareasActNombre').textContent = SSTATE.actNom;
+  document.getElementById('nuevaSubtarea').value = '';
+  await renderSubtareas();
+  document.getElementById('modalSubtareasOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('nuevaSubtarea').focus(), 200);
+}
+function closeModalSubtareas(e) { if (e.target === document.getElementById('modalSubtareasOverlay')) closeModalSubtareasDirect(); }
+function closeModalSubtareasDirect() { document.getElementById('modalSubtareasOverlay').classList.remove('open'); }
+
+async function renderSubtareas() {
+  const list = document.getElementById('subtareasList');
+  list.innerHTML = '<div class="loading" style="padding:20px"><div class="spinner"></div></div>';
+  try {
+    const subs = await api(cronAPI({ action: 'subtareas', actividad_id: SSTATE.actId }));
+    if (!subs.length) {
+      list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text2);font-size:13px">Sin subtareas aún. Agrega la primera abajo.</div>';
+    } else {
+      list.innerHTML = subs.map(s => buildSubtareaItem(s)).join('');
+    }
+    actualizarProgressBar(subs);
+    actualizarBadge(SSTATE.actId, subs);
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+function buildSubtareaItem(s) {
+  return `<div class="subtarea-item${s.completada=='1'?' done':''}" id="sub-item-${s.id}">
+    <div class="subtarea-check${s.completada=='1'?' done':''}" onclick="toggleSubtarea(${s.id})">
+      ${s.completada=='1' ? '<i class="fas fa-check" style="font-size:10px"></i>' : ''}
+    </div>
+    <span class="subtarea-nombre">${s.nombre}</span>
+    <button class="subtarea-del" onclick="eliminarSubtarea(${s.id})" title="Eliminar"><i class="fas fa-times"></i></button>
+  </div>`;
+}
+
+function actualizarProgressBar(subs) {
+  const prog = document.getElementById('subtareasProgress');
+  const bar  = document.getElementById('subtareasProgressBar');
+  const lbl  = document.getElementById('subtareasProgressLabel');
+  if (!subs.length) { prog.style.display = 'none'; return; }
+  const total = subs.length;
+  const done  = subs.filter(s => s.completada == '1').length;
+  const pct   = Math.round((done / total) * 100);
+  prog.style.display = 'block';
+  bar.style.width = pct + '%';
+  bar.style.background = pct === 100 ? 'var(--green)' : 'var(--primary)';
+  lbl.textContent = `${done} / ${total} (${pct}%)`;
+}
+
+function actualizarBadge(actId, subs) {
+  const badge = document.getElementById('badge-sub-' + actId);
+  if (!badge) return;
+  const total = subs.length;
+  const done  = subs.filter(s => s.completada == '1').length;
+  badge.parentElement.style.color = total > 0 && done === total ? 'var(--green)' : '';
+  badge.textContent = total > 0 ? `${done}/${total}` : 'Sub';
+}
+
+async function agregarSubtarea() {
+  const input  = document.getElementById('nuevaSubtarea');
+  const nombre = input.value.trim();
+  if (!nombre) return;
+  input.value = '';
+  try {
+    await api(cronAPI({ action: 'subtarea' }), 'POST', { actividad_id: SSTATE.actId, nombre });
+    await renderSubtareas();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function toggleSubtarea(id) {
+  try {
+    await api(cronAPI({ action: 'subtarea' }), 'PUT', { id });
+    await renderSubtareas();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function eliminarSubtarea(id) {
+  try {
+    await api(cronAPI({ action: 'subtarea', id }), 'DELETE');
+    await renderSubtareas();
+  } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
 </script>
 </body>
 </html>

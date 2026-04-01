@@ -15,14 +15,18 @@ try {
     $db = getDB();
 
     match(true) {
-        $method === 'GET' && $action === 'cronograma'   => getCronograma($db),
-        $method === 'GET' && $action === 'stats'        => getStats($db),
-        $method === 'GET' && $action === 'actividades'  => getActividades($db),
-        $method === 'POST' && $action === 'toggle'      => toggleProgramacion($db),
-        $method === 'POST' && $action === 'actividad'   => crearActividad($db),
-        $method === 'PUT' && $action === 'actividad'    => actualizarActividad($db),
-        $method === 'DELETE' && $action === 'actividad' => eliminarActividad($db),
-        $method === 'PUT' && $action === 'estado'       => actualizarEstado($db),
+        $method === 'GET' && $action === 'cronograma'         => getCronograma($db),
+        $method === 'GET' && $action === 'stats'              => getStats($db),
+        $method === 'GET' && $action === 'actividades'        => getActividades($db),
+        $method === 'GET' && $action === 'subtareas'          => getSubtareas($db),
+        $method === 'POST' && $action === 'toggle'            => toggleProgramacion($db),
+        $method === 'POST' && $action === 'actividad'         => crearActividad($db),
+        $method === 'PUT' && $action === 'actividad'          => actualizarActividad($db),
+        $method === 'DELETE' && $action === 'actividad'       => eliminarActividad($db),
+        $method === 'PUT' && $action === 'estado'             => actualizarEstado($db),
+        $method === 'POST' && $action === 'subtarea'          => crearSubtarea($db),
+        $method === 'PUT' && $action === 'subtarea'           => toggleSubtarea($db),
+        $method === 'DELETE' && $action === 'subtarea'        => eliminarSubtarea($db),
         default => jsonResponse(['error' => 'Acción no válida'], 404)
     };
 } catch (PDOException $e) {
@@ -220,6 +224,45 @@ function eliminarActividad(PDO $db): never {
     if (!$id) throw new Exception('ID requerido');
     $db->prepare("UPDATE actividades SET activo=0 WHERE id=:id")->execute([':id' => $id]);
     jsonResponse(['message' => 'Actividad eliminada correctamente']);
+}
+
+function getSubtareas(PDO $db): never {
+    $actId = (int)($_GET['actividad_id'] ?? 0);
+    if (!$actId) throw new Exception('actividad_id requerido');
+    $stmt = $db->prepare("SELECT * FROM subtareas WHERE actividad_id=:id ORDER BY orden, id");
+    $stmt->execute([':id' => $actId]);
+    jsonResponse($stmt->fetchAll());
+}
+
+function crearSubtarea(PDO $db): never {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $actId  = (int)($data['actividad_id'] ?? 0);
+    $nombre = trim($data['nombre'] ?? '');
+    if (!$actId || $nombre === '') throw new Exception('Parámetros inválidos');
+    $stmt = $db->prepare("INSERT INTO subtareas (actividad_id, nombre, orden)
+                          SELECT :id, :nom, COALESCE(MAX(orden),0)+1 FROM subtareas WHERE actividad_id=:id2");
+    $stmt->execute([':id' => $actId, ':nom' => $nombre, ':id2' => $actId]);
+    $id = $db->lastInsertId();
+    $row = $db->prepare("SELECT * FROM subtareas WHERE id=:id");
+    $row->execute([':id' => $id]);
+    jsonResponse($row->fetch());
+}
+
+function toggleSubtarea(PDO $db): never {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $id = (int)($data['id'] ?? 0);
+    if (!$id) throw new Exception('ID requerido');
+    $db->prepare("UPDATE subtareas SET completada = 1 - completada WHERE id=:id")->execute([':id' => $id]);
+    $row = $db->prepare("SELECT * FROM subtareas WHERE id=:id");
+    $row->execute([':id' => $id]);
+    jsonResponse($row->fetch());
+}
+
+function eliminarSubtarea(PDO $db): never {
+    $id = (int)($_GET['id'] ?? 0);
+    if (!$id) throw new Exception('ID requerido');
+    $db->prepare("DELETE FROM subtareas WHERE id=:id")->execute([':id' => $id]);
+    jsonResponse(['message' => 'Subtarea eliminada']);
 }
 
 function actualizarEstado(PDO $db): never {
