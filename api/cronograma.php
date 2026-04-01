@@ -263,11 +263,14 @@ function crearSubtarea(PDO $db): never {
     $nombre = trim($data['nombre']        ?? '');
     if (!$actId || !$anio || !$mes || $nombre === '') throw new Exception('Parámetros inválidos');
 
-    $stmt = $db->prepare("INSERT INTO subtareas (actividad_id, anio, mes, nombre, orden)
-                          SELECT :id, :y, :m, :nom, COALESCE(MAX(orden),0)+1
-                          FROM subtareas WHERE actividad_id=:id2 AND anio=:y2 AND mes=:m2");
-    $stmt->execute([':id'=>$actId,':y'=>$anio,':m'=>$mes,':nom'=>$nombre,':id2'=>$actId,':y2'=>$anio,':m2'=>$mes]);
-    $row = $db->prepare("SELECT * FROM subtareas WHERE id=:id");
+    $ordStmt = $db->prepare("SELECT COALESCE(MAX(orden), 0) + 1 FROM subtareas WHERE actividad_id=:a AND anio=:y AND mes=:m");
+    $ordStmt->execute([':a' => $actId, ':y' => $anio, ':m' => $mes]);
+    $orden = (int)$ordStmt->fetchColumn();
+
+    $db->prepare("INSERT INTO subtareas (actividad_id, anio, mes, nombre, orden) VALUES (:a, :y, :m, :nom, :ord)")
+       ->execute([':a' => $actId, ':y' => $anio, ':m' => $mes, ':nom' => $nombre, ':ord' => $orden]);
+
+    $row = $db->prepare("SELECT * FROM subtareas WHERE id = :id");
     $row->execute([':id' => $db->lastInsertId()]);
     jsonResponse($row->fetch());
 }
